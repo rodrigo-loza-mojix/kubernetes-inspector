@@ -12,7 +12,38 @@ import os
 import logging
 import re
 
-logger=logging.getLogger(__name__)
+logging.config.dictConfig({
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'console': {
+            'format': '%(name)-12s %(levelname)-8s %(message)s'
+        },
+        'file': {
+            'format': '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'console'
+        },
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'formatter': 'file',
+            'filename': '/tmp/debug.log'
+        }
+    },
+    'loggers': {
+        '': {
+            'level': 'DEBUG',
+            'handlers': ['console', 'file']
+        }
+    }
+})
+
+logger=logging.getLogger("__name__")
 
 @method_decorator(csrf_exempt, name='dispatch')
 class GetPods(View):
@@ -23,6 +54,7 @@ class GetPods(View):
     Headers:
       - Authorization: Bearer $TOKEN
     """
+    logger.info("Endpoint getpods hit.")
     # Get request parameter.
     name_search_parameter:str=request.GET.get("name", "")
     namespace_parameter:str=request.GET.get("namespace", "")
@@ -37,24 +69,24 @@ class GetPods(View):
     configuration.api_key_prefix["authorization"]="Bearer"
     configuration.host:str="https://"+kubernetes_svc
     configuration.ssl_ca_cert:str="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-    print("DEBUG: Name param: ", name_search_parameter)
-    print("DEBUG: Pods")
+    logger.debug("Name param: "+name_search_parameter)
     #print("DEBUG: token: ", authorization_token)
-    print("DEBUG: Namespace: ", namespace_parameter)
-    print("DEBUG: k8s service host: ", kubernetes_svc)
+    logger.debug("Namespace: "+namespace_parameter)
+    logger.debug("k8s service host: "+kubernetes_svc)
     v1 = client.CoreV1Api(client.ApiClient(configuration))
     try:
       pods=v1.list_namespaced_pod(namespace_parameter)
     except:
-      print("ERROR: k8s api")
+      logger.error("k8s api")
     # Logic to find the pod.
     matched_pods:list=[]
     for index_i, pod in enumerate(pods.items):
+      #print("DEBUG: ", pod)
       pod_name:str=pod.metadata.name
       print("DEBUG: Pod name: ", pod_name)
       containers:any=pod.spec.containers[:]
       phmap:dict={}
-      if name_search_parameter in pod_name:
+      if len(re.findall(name_search_parameter, pod_name)) > 0:
         containers_list:list=[]
         if len(containers) > 0:
           for index_j, container in enumerate(containers):
