@@ -1,6 +1,6 @@
 absl-py==0.7.1
 certifi==2019.3.9
-Django==2.2
+Django==2.2.13
 django-cors-headers==2.5.2
 docutils==0.14
 Jinja2==2.10.1
